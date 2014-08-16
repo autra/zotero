@@ -213,6 +213,12 @@ Zotero.Date = new function(){
 	
 	
 	/*
+     * THIS IS A MODIFIED VERSION OF THE OFFICIAL METHOD OF PARSING DATE.
+     * it removes a lot of the parsing effort from the original codebase.
+     * It thus just tries to parse obvious date like 2014-12-12
+     * If it fails, it does *nothing*, it just keeps the string as is.
+     * It avoids a lot of silly things for the user.
+     *
 	 * converts a string to an object containing:
 	 *    day: integer form of the day
 	 *    month: integer form of the month (indexed from 0, not 1)
@@ -348,94 +354,7 @@ Zotero.Date = new function(){
 			Zotero.debug("DATE: could not apply algorithms");
 			parts.push({ part: string });
 		}
-		
-		// couldn't find something with the algorithms; use regexp
-		// YEAR
-		if(!date.year) {
-			for (var i in parts) {
-				var m = _yearRe.exec(parts[i].part);
-				if (m) {
-					date.year = m[2];
-					date.order = _insertDateOrderPart(date.order, 'y', parts[i]);
-					parts.splice(
-						i, 1,
-						{ part: m[1], before: true },
-						{ part: m[3] }
-					);
-					Zotero.debug("DATE: got year (" + date.year + ", " + JSON.stringify(parts) + ")");
-					break;
-				}
-			}
-		}
-		
-		// MONTH
-		if(!date.month) {
-			// compile month regular expression
-			var months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul',
-				'aug', 'sep', 'oct', 'nov', 'dec'];
-			// If using a non-English bibliography locale, try those too
-			if (Zotero.locale != 'en-US') {
-				Zotero.Date.getMonths();
-				months = months.concat(_months['short']).concat(_months['long']);
-				for(var i=0, n=months.length; i<n; i++) months[i] = months[i].toLowerCase();
-			}
-			
-			if(!_monthRe) {
-				_monthRe = new RegExp("^(.*)\\b("+months.join("|")+")[^ ]*(?: (.*)$|$)", "i");
-			}
-			
-			for (var i in parts) {
-				var m = _monthRe.exec(parts[i].part);
-				if (m) {
-					// Modulo 12 in case we have multiple languages
-					date.month = months.indexOf(m[2].toLowerCase()) % 12;
-					date.order = _insertDateOrderPart(date.order, 'm', parts[i]);
-					parts.splice(
-						i, 1,
-						{ part: m[1], before: "m" },
-						{ part: m[3], after: "m" }
-					);
-					Zotero.debug("DATE: got month (" + date.month + ", " + JSON.stringify(parts) + ")");
-					break;
-				}
-			}
-		}
-		
-		// DAY
-		if(!date.day) {
-			// compile day regular expression
-			if(!_dayRe) {
-				var daySuffixes = Zotero.getString ? Zotero.getString("date.daySuffixes").replace(/, ?/g, "|") : "";
-				_dayRe = new RegExp("\\b([0-9]{1,2})(?:"+daySuffixes+")?\\b(.*)", "i");
-			}
-			
-			for (var i in parts) {
-				var m = _dayRe.exec(parts[i].part);
-				if (m) {
-					var day = parseInt(m[1], 10);
-					// Sanity check
-					if (day <= 31) {
-						date.day = day;
-						date.order = _insertDateOrderPart(date.order, 'd', parts[i]);
-						if(m.index > 0) {
-							var part = parts[i].part.substr(0, m.index);
-							if(m[2]) {
-								part += " " + m[2];;
-							}
-						} else {
-							var part = m[2];
-						}
-						parts.splice(
-							i, 1,
-							{ part: part }
-						);
-						Zotero.debug("DATE: got day (" + date.day + ", " + JSON.stringify(parts) + ")");
-						break;
-					}
-				}
-			}
-		}
-		
+
 		// Concatenate date parts
 		date.part = '';
 		for (var i in parts) {
